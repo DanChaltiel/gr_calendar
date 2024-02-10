@@ -5,14 +5,14 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
-name: pkgdown
+name: shinylive
 
 jobs:
-  pkgdown:
+  shinylive:
     runs-on: ubuntu-latest
     # Only restrict concurrency for non-PR jobs
     concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+      group: shinylive-${{ github.event_name != 'pull_request' || github.run_id }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -32,7 +32,7 @@ jobs:
       - name: Build site
         run: |
           install.packages("shinylive")
-          shinylive::export(appdir="app", destdir="web")
+          shinylive::export(appdir="app", destdir="docs")
         shell: Rscript {0}
 
       - name: Deploy to GitHub pages 🚀
