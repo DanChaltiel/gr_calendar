@@ -1,5 +1,5 @@
 
-#TODO supprimer 02/11 JF comme si c'était un RTT
+#TODO: supprimer 02/11 JF comme si c'était un RTT
 #TODO: bouton exemple qui charge mes congés
 #TODO: gérer les congres, ajouter le nom ?
 #TODO: boutons fleches pour changer d'année
@@ -8,15 +8,23 @@
 
 # Init ----------------------------------------------------------------------------------------
 
-options(encoding="UTF-8")
-options(DT.options = list(pageLength=5, lengthChange=FALSE, searching=FALSE))
+options(
+  # lubridate.week.start = 1,
+  DT.options = list(pageLength=5, lengthChange=FALSE, searching=FALSE)
+)
 
 suppressPackageStartupMessages({
-  library(shiny)
-  library(tidyverse)
-  library(plotly) 
-  library(glue)
+  library(dplyr)
   library(DT)
+  library(forcats)
+  library(glue)
+  library(lubridate)
+  library(plotly) 
+  library(purrr)
+  library(shiny)
+  library(stringr)
+  library(tidyr)
+  library(tibble)
 })
 
 source("functions.R")
@@ -25,11 +33,8 @@ source("functions.R")
 #GLOBALS
 month_names = month(1, label=TRUE) %>% levels()
 user_input = list()
-# user_input = read_rds("example_user_input.rds")
 
-print("Go")
-
-
+cli::cli_inform(c(v="Shiny server started, encoding={getOption('encoding')}"))
 
 # Server --------------------------------------------------------------------------------------
 
@@ -51,7 +56,14 @@ function(input, output, session) {
     showNotificationCli("db_dates() : {.val {nrow(rtn)}} lignes", type="default")
     rtn
   }) 
-
+  
+  selected_year = reactive({
+    a = input$selected_year  
+    if(a=="Tout") a=NULL
+    if(is.null(a) | a=="") a = year(today())
+    a
+  })
+  
   ## Update le choix d'années selon user_input ----
   updateSelectInput(session, "selected_year",
                     # choices = c("Tout", rev(input_years)),
@@ -101,7 +113,7 @@ function(input, output, session) {
   observe({
     x = req(input$plot_click)
     if(!is.null(x)){
-      a = input$selected_year
+      a = selected_year()
       tgt = make_date(year=as.numeric(a), month=13-round(x$y), day=round(x$x))
       if(is.na(tgt)) return()
       inputId = c("period_from", "period_to")[toggle_click_fromto+1]
@@ -113,7 +125,7 @@ function(input, output, session) {
   observe({
     x = event_data("plotly_click", source="calendar_plot")
     if(!is.null(x)){
-      a = input$selected_year
+      a = selected_year()
       tgt = make_date(year=as.numeric(a), month=13-x$y, day=x$x)
       if(is.na(tgt)) return()
       inputId = c("period_from", "period_to")[toggle_click_fromto+1]
@@ -127,7 +139,7 @@ function(input, output, session) {
   suppr_period = function(i, tb, val, label) {
     if(length(i)==0) {
       showNotificationCli("Sélectionner une ligne pour la supprimer", type="error")
-      return(NULL)
+      return(0)
     }
     
     dat = tb[i,] %>% 
@@ -135,7 +147,7 @@ function(input, output, session) {
     if(nrow(dat)!=1) {
       showNotificationCli("Erreur 22838, merci d'ajouter une issue, si possible avec le fichier rds attaché.",
                           type="error")
-      return(NULL)
+      return(0)
     }
     
     if(val=="recupJF"){
@@ -231,35 +243,31 @@ function(input, output, session) {
       select(date, source=recup_jf_source)
   })
   
-  output$table_CA = renderDT(table_CA(), options=list(), rownames=FALSE, selection="single")
-  output$table_RTT = renderDT(table_RTT(), options=list(), rownames=FALSE, selection="single")
-  output$table_recupJF = renderDT(table_recupJF(), options=list(), rownames=FALSE, selection="single")
-  
+  output$table_CA = renderDT(table_CA(), options=list(), server=FALSE, rownames=FALSE, selection="single")
+  output$table_RTT = renderDT(table_RTT(), options=list(), server=FALSE, rownames=FALSE, selection="single")
+  output$table_recupJF = renderDT(table_recupJF(), options=list(), server=FALSE, rownames=FALSE, selection="single")
   
   
   
   ## Output Plot ----
-  output$plot_title = renderText(paste("Calendrier de l'année", input$selected_year))
+  output$plot_title = renderText(paste("Calendrier de l'année", selected_year()))
   output$calendarPlotly = renderPlotly({ 
-    a = input$selected_year  
-    showNotificationCli("render calendarPlot annee={.val {a}}, plotly={.val {input$plot_plotly}}", type="default")
-    # validate(need(FALSE, "TODO"))
-    
-    validate(need(!is.null(a) & a!="" & nrow(db_dates())>0, 
-                  "Calcul du graphique"))
-    if(a=="Tout") a=NULL
-    # browser() 
-    get_calendar_plot(data=db_dates(), annee=a, plotly=input$plot_plotly)
+    if(!input$plot_plotly) return(NULL)
+    a = selected_year()
+    db = db_dates()
+    showNotificationCli("render calendarPlot annee={.val {a}}, plotly={.val {TRUE}}", type="default")
+
+    get_calendar_plot(data=db, annee=a, plotly=TRUE)
   })
   output$calendarPlot = renderPlot({ 
-    a = input$selected_year  
-    showNotificationCli("render calendarPlot annee={.val {a}}, plotly={.val {input$plot_plotly}}", type="default")
-    # validate(need(FALSE, "TODO"))
-    
-    validate(need(!is.null(a) & a!="" & nrow(db_dates())>0, 
+    if(input$plot_plotly) return(NULL)
+    a = selected_year()  
+    db = db_dates()
+    # showNotificationCli("render calendarPlot annee={.val {a}}, plotly={.val {input$plot_plotly}}", type="default")
+    showNotificationCli("render calendarPlot annee={.val {a}}, plotly={.val {FALSE}}", type="default")
+    # if(is.null(a) | a=="" | nrow(db)==0) return(ggplot())
+    validate(need(!is.null(a) & a!="" & nrow(db)>0, 
                   "Calcul du graphique"))
-    if(a=="Tout") a=NULL
-    # browser() 
-    get_calendar_plot(data=db_dates(), annee=a, plotly=input$plot_plotly)
+    get_calendar_plot(data=db, annee=a, plotly=FALSE)
   })
 }
