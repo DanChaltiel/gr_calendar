@@ -87,6 +87,15 @@ function(input, output, session) {
     r_user_input[[type]] = unique(c(seq(from, to, by="day"), r_user_input[[type]]))
   })
   
+  ## Example r_user_input ----
+  observeEvent(input$action_example, { 
+    source("user_input_example.R")
+    example_input = get_example_input()
+    update_input(example_input, r_user_input, parent.frame())
+    showNotificationCli("Chargement de exemple : {.val {sum(lengths(example_input))}} entrées", 
+                        type="default") 
+  })
+  
   ## Download user input ----
   output$action_download = downloadHandler(filename="gr_calendar.rds", content = function(file) {
     input = reactiveValuesToList(r_user_input)

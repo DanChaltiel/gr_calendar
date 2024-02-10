@@ -64,6 +64,7 @@ fluidPage(
           column(width=6, dateInput("period_to", label="Fin")),
         ),
         actionButton("action_input", "Ajouter") #TODO centrer
+        actionButton("action_example", "Charger un Exemple"),
       ),
     ),
     
