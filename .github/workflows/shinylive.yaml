@@ -7,6 +7,10 @@ on:
 
 name: shinylive
 
+permissions:
+  contents: read
+  pages: write
+  
 jobs:
   shinylive:
     runs-on: ubuntu-latest
@@ -29,7 +33,7 @@ jobs:
       #     extra-packages: any::pkgdown, local::.
       #     needs: website
 
-      - name: Build site
+      - name: Export shinylive to docs
         run: |
           install.packages("shinylive")
           shinylive::export(appdir="app", destdir="docs")
