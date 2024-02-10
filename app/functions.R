@@ -249,4 +249,11 @@ intersect.Date = function(x, y) base::intersect(x, y) %>% as_date()
 wmin = function(...) suppressWarnings(min(...) )
 wmax = function(...) suppressWarnings(max(...) )
 
+
+update_input = function(new_input, r_user_input, envir) {
+  iwalk(new_input, ~ {
+    eval({r_user_input[[.y]] = unique(c(.x, r_user_input[[.y]]))}, envir=envir)
+  })
+}
+
 cli::cli_inform(c(v="Functions loaded"))

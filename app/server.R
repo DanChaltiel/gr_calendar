@@ -103,10 +103,11 @@ function(input, output, session) {
     validate(need(ext=="rds", "L'appli ne comprend que les fichiers .rds"))
 
     new_content = readRDS(f$datapath)
+    update_input(new_content, r_user_input, parent.frame())
     showNotificationCli("Chargement de données : {.val {sum(lengths(new_content))}} entrées", 
                         type="default")
     
-    iwalk(new_content, ~ {r_user_input[[.y]] <<- unique(c(.x, r_user_input[[.y]]))})
+    # iwalk(new_content, ~ {r_user_input[[.y]] <<- unique(c(.x, r_user_input[[.y]]))})
   })
   
   ## Plot click = Update date input ----
