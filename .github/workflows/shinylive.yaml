@@ -41,4 +41,4 @@ jobs:
         with:
           clean: false
           branch: gh-pages
-          folder: web
+          folder: docs
