@@ -8,6 +8,8 @@ suppressPackageStartupMessages({
   library(shiny)
 })
 
+source("debug_js.R")
+
 css = tags$head(tags$style(HTML("
   #shiny-notification-panel {
     //position:fixed;
