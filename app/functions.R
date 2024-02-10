@@ -1,6 +1,5 @@
 
 
-print("Functions loaded")
 
 
 get_jours_feries = function(first_date, last_date, dir="jf"){
@@ -23,22 +22,19 @@ get_jours_feries = function(first_date, last_date, dir="jf"){
 
 get_data = function(user_input, jours_feries){
   month_names = month(1, label=TRUE) %>% levels()
-    
-  # print("jrioezapruezio")
-  # print(user_input)
-  # print(jours_feries)
   
   all_user_input = list_c(user_input) 
   if(length(all_user_input)==0) all_user_input = today()
   first_date = floor_date(min(all_user_input), "year")
   last_date = ceiling_date(max(all_user_input), "year") - days(1)
   
-  db_dates =
+  
+  rtn =
     tibble(date = seq(first_date, last_date, by = "day"),
            year = year(date),
-           month = month(date, label = TRUE),
+           month = month(date, label=TRUE, locale="French_France.1252"),
            day = mday(date),
-           weekday = wday(date, label = TRUE, abbr = FALSE),
+           weekday = wday(date, label=TRUE, abbr=FALSE, locale="French_France.1252"),
            w = substr(weekday, 1, 1) %>% str_replace_all("s|d", "")) %>%
     complete(day, month, year) %>%
     arrange(desc(date)) %>% 
@@ -47,7 +43,7 @@ get_data = function(user_input, jours_feries){
       day_label = day %>% str_pad(width=2, pad="0") %>% factor(),
       ferie_name = jours_feries[as.character(date)],
       
-      weekend = w=="",
+      weekend = wday(date, week_start=1) %in% 6:7,
       ferie = !is.na(ferie_name),
       conges = date %in% user_input$conges,
       congres = date %in% user_input$congres,
@@ -75,13 +71,17 @@ get_data = function(user_input, jours_feries){
         rtt_bak & ferie ~ "RTT/JNT posé pendant un jour férié",
         .default = NA
       )
-    ) %>%
+    )
+  
+  rtn = rtn %>%
     mutate(jf_a_recup_day = cur_group()[[1]][[1]][row_number()] %||% NA,
            .by=jf_a_recup_day_gp) %>% 
     mutate(seq_rtt = ifelse(any(rtt) & first(rtt|weekend|ferie) , TRUE, FALSE),
            .by = gp_rtt) %>%
     mutate(seq_conges = ifelse(any(conges) & first(conges|weekend) , TRUE, FALSE),
-           .by = gp_conges) %>% 
+           .by = gp_conges)
+  
+  rtn = rtn %>% 
     mutate(
       recup_jf_source = map_chr(date, ~{
         # a = !is.na(jf_a_recup_day) & jf_a_recup_day==.x
@@ -134,6 +134,7 @@ get_data = function(user_input, jours_feries){
         .default = glue("{datef}<br>{day_type}")
       ),
     )
+  rtn
 }
 # db_dates = get_data(user_input, jours_feries)
 
@@ -228,13 +229,18 @@ get_sequence = function(data=db_dates, type=c("rtt", "conges")){
 
 format_dmy = function(x) format(x, "%d/%m/%Y")
 
-# cli_glue = function(x, .envir=parent.frame()) cli::cli_fmt(cli::cli_text(x, .envir=.envir), collapse=TRUE, strip_newline=TRUE) |> stringr::str_replace_all("\n", " ")
- 
+
+cli_glue = function(x, .envir=parent.frame()) {
+  cli::cli_text(x, .envir=.envir) |> 
+    cli::cli_fmt(collapse=TRUE, strip_newline=TRUE) |> 
+    stringr::str_replace_all("\n", " ")
+}
+
 showNotificationCli = function(msg, duration=15, type="default") {
-  # cli::cli_inform(msg, .envir = parent.frame()) 
-  # msg = cli_glue(msg, .envir = parent.frame())
+  cli::cli_inform(msg, .envir = parent.frame())
+  msg = cli::ansi_html(cli_glue(msg, .envir = parent.frame()))
   if(missing(duration) & type!="default") duration=NULL
-  showNotification(HTML(ansi_html(msg)), type=type, duration=duration)
+  showNotification(HTML(msg), type=type, duration=duration)
 }
 
 setdiff.Date = function(x, y) base::setdiff(x, y) %>% as_date()
@@ -242,3 +248,5 @@ intersect.Date = function(x, y) base::intersect(x, y) %>% as_date()
 
 wmin = function(...) suppressWarnings(min(...) )
 wmax = function(...) suppressWarnings(max(...) )
+
+cli::cli_inform(c(v="Functions loaded"))
